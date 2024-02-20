@@ -1,0 +1,69 @@
+---
+title: "psychosis analysis"
+output: html_document
+date: "2024-02-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# package import
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+```
+
+# data import
+
+```{r}
+v1data = read_csv("V1/lexical_results.csv") %>% mutate(version = "V1")
+v2data = read_csv("V2/lexical_results.csv") %>% mutate(version = "V2")
+combined = rbind(v1data, v2data)
+
+items = combined %>% 
+  group_by(version, Subject) %>% count() %>%
+  pivot_wider(names_from = version, values_from = n)
+```
+
+# basic lexical estimates
+
+```{r}
+lexical_mean = combined %>% 
+  group_by(version, Subject) %>%
+  mutate(itemno = row_number()) %>%
+  filter(itemno != 1) %>%
+  summarise(semantic = mean(Semantic_Similarity),
+            frequency = mean(Frequency_Value),
+            phon = mean(Phonological_Similarity)) %>%
+  pivot_longer(names_to = "cue", cols = semantic:phon)
+
+lexical_mean %>% 
+  filter(cue == "frequency")%>%
+  ggplot(aes(x = version, y = value, 
+             group = Subject, color = Subject)) +
+  geom_point()+
+  geom_line()+
+  theme_clean()
+```
+
+# best model
+
+```{r}
+v1models = read_csv("V1/model_results.csv") %>% mutate(version = "V1")
+v2models = read_csv("V2/model_results.csv") %>% mutate(version = "V2")
+combined_models = rbind(v1models, v2models)
+
+# confirm no missing nLLs
+which(is.na(combined_models$Negative_Log_Likelihood_Optimized))
+
+# best models
+
+combined_models %>% 
+  group_by(version, Model) %>%
+  summarize(sumNLL = sum(Negative_Log_Likelihood_Optimized)) %>%
+  ungroup() %>% group_by(version) %>%
+  filter(sumNLL == min(sumNLL))
+```
+
+
