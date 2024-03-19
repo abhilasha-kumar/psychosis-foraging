@@ -127,7 +127,6 @@ SID,entry,evaluation,replacement
 11,orangutan,FOUND,orangutan
 11,havanese_dog,REPLACE,havanese dog
 11,dog,FOUND,dog
-11,nap,REPLACE,asp
 11,snake,FOUND,snake
 11,garter_snake,REPLACE,garter snake
 11,deer,FOUND,deer
@@ -422,7 +421,6 @@ SID,entry,evaluation,replacement
 26,butterfly,FOUND,butterfly
 26,moth,FOUND,moth
 28,Escherichia_coli,EXCLUDE,EXCLUDE
-28,genus,REPLACE,gnu
 28,fly,FOUND,fly
 28,deer,FOUND,deer
 28,polar_bear,REPLACE,polar bear
@@ -446,7 +444,7 @@ SID,entry,evaluation,replacement
 28,viper,FOUND,viper
 28,sea_snake,REPLACE,sea snake
 28,penguin,FOUND,penguin
-28,mantis,FOUND,mantis
+28,praying_mantis,REPLACE,praying mantis
 28,tarantula,FOUND,tarantula
 28,black_widow,REPLACE,black widow
 29,snake,FOUND,snake
@@ -940,7 +938,6 @@ SID,entry,evaluation,replacement
 56,shrimp,FOUND,shrimp
 56,ostrich,FOUND,ostrich
 56,tiger,FOUND,tiger
-56,lorax,REPLACE,oryx
 56,crab,FOUND,crab
 56,dolphin,FOUND,dolphin
 56,whale,FOUND,whale
@@ -1007,7 +1004,6 @@ SID,entry,evaluation,replacement
 61,chinchilla,FOUND,chinchilla
 61,ferret,FOUND,ferret
 61,coyote,FOUND,coyote
-61,nice,REPLACE,mice
 61,sweet,EXCLUDE,EXCLUDE
 61,emotional,EXCLUDE,EXCLUDE
 61,personable,EXCLUDE,EXCLUDE
@@ -1506,12 +1502,12 @@ SID,entry,evaluation,replacement
 86,baboon,FOUND,baboon
 86,giraffe,FOUND,giraffe
 86,elephant,FOUND,elephant
-86,frog,FOUND,frog
+86,pearl_frog,EXCLUDE,EXCLUDE
 86,american_toad,REPLACE,american toad
 86,bullfrog,FOUND,bullfrog
-86,frog,FOUND,frog
+86,lover_frog,EXCLUDE,EXCLUDE
 86,northern_cricket_frog,REPLACE,northern cricket frog
-86,gray treefrog,FOUND,gray treefrog
+86,gray_treefrog,REPLACE,gray treefrog
 86,eastern newt,FOUND,eastern newt
 86,long_tailed_salamander,REPLACE,long tailed salamander
 86,dolphin,FOUND,dolphin
@@ -1519,12 +1515,12 @@ SID,entry,evaluation,replacement
 86,beluga_whale,REPLACE,beluga whale
 86,whale_shark,REPLACE,whale shark
 86,great_white_shark,REPLACE,great white shark
-86,hammerhead,FOUND,hammerhead
+86,hammerhead_shark,REPLACE,hammerhead shark
 86,blowfish,FOUND,blowfish
 86,clownfish,FOUND,clownfish
 86,robin,FOUND,robin
 86,blue_jay,REPLACE,blue jay
-86,bald eagle,FOUND,bald eagle
+86,bald_eagle,REPLACE,bald eagle
 86,barn_owl,REPLACE,barn owl
 86,white_tailed_deer,REPLACE,white tailed deer
 86,possum,FOUND,possum
@@ -1671,8 +1667,8 @@ SID,entry,evaluation,replacement
 92,walleye,FOUND,walleye
 92,sturgeon,FOUND,sturgeon
 92,shark,FOUND,shark
-92,tigerfish,REPLACE,triggerfish
-92,hammerhead,FOUND,hammerhead
+92,tigerfish_fish,EXCLUDE,EXCLUDE
+92,hammerhead_shark,REPLACE,hammerhead shark
 92,whale,FOUND,whale
 92,dolphin,FOUND,dolphin
 92,seagull,FOUND,seagull
@@ -1782,7 +1778,7 @@ SID,entry,evaluation,replacement
 97,bear,FOUND,bear
 97,lion,FOUND,lion
 97,giraffe,FOUND,giraffe
-97,gray treefrog,FOUND,gray treefrog
+97,gray_treefrog,REPLACE,gray treefrog
 97,green_treefrog,REPLACE,green tree frog
 97,anole,FOUND,anole
 97,long_tailed_lizard,REPLACE,long tailed lizard
@@ -2170,7 +2166,7 @@ SID,entry,evaluation,replacement
 812,dog,FOUND,dog
 812,snake,FOUND,snake
 812,corn_snake,REPLACE,corn snake
-812,boa,FOUND,boa
+812,boa_constrictor,REPLACE,boa constrictor
 812,anaconda,FOUND,anaconda
 812,human,FOUND,human
 812,manatee,FOUND,manatee
@@ -2206,7 +2202,7 @@ SID,entry,evaluation,replacement
 813,fish,FOUND,fish
 813,snake,FOUND,snake
 813,stingray,FOUND,stingray
-813,mantis,FOUND,mantis
+813,praying_mantis,REPLACE,praying mantis
 813,butterfly,FOUND,butterfly
 813,ant,FOUND,ant
 813,fire_ant,REPLACE,fire ant
@@ -2666,12 +2662,12 @@ SID,entry,evaluation,replacement
 835,ape,FOUND,ape
 835,insect,FOUND,insect
 835,spider,FOUND,spider
-835,apex,REPLACE,ape
+835,apex_noreplace,EXCLUDE,EXCLUDE
 835,elephant,FOUND,elephant
 835,tiger,FOUND,tiger
 835,moonglow_boa,REPLACE,moonglow boa
 835,monkey,FOUND,monkey
-835,white tiger,FOUND,white tiger
+835,white_tiger,REPLACE,white tiger
 835,bird,FOUND,bird
 835,mockingjay,EXCLUDE,EXCLUDE
 835,peacock,FOUND,peacock
@@ -2779,7 +2775,7 @@ SID,entry,evaluation,replacement
 841,elephant,FOUND,elephant
 841,cat,FOUND,cat
 841,dog,FOUND,dog
-841,mantis,FOUND,mantis
+841,praying_mantis,REPLACE,praying mantis
 841,shrimp,FOUND,shrimp
 841,whale,FOUND,whale
 841,lion,FOUND,lion
@@ -3966,7 +3962,7 @@ SID,entry,evaluation,replacement
 5502,lizard,FOUND,lizard
 5502,komodo_dragon,REPLACE,komodo dragon
 5502,fruit_bat,REPLACE,fruit bat
-5502,fruitbat,REPLACE,fruit bat
+5502,fruit_bat,REPLACE,fruit bat
 5502,arctic_fox,REPLACE,arctic fox
 5502,fennec_fox,REPLACE,fennec fox
 5503,aardvark,FOUND,aardvark
@@ -4065,7 +4061,7 @@ SID,entry,evaluation,replacement
 5508,gorilla,FOUND,gorilla
 5508,lizard,FOUND,lizard
 5508,centipede,FOUND,centipede
-5508,people,REPLACE,poodle
+5508,person,FOUND,person
 5508,dinosaur,FOUND,dinosaur
 5508,bird,FOUND,bird
 5508,canary,FOUND,canary
@@ -4137,7 +4133,7 @@ SID,entry,evaluation,replacement
 5512,rat,FOUND,rat
 5512,cow,FOUND,cow
 5512,goat,FOUND,goat
-5512,sifaka,REPLACE,sika
+5512,sifaka_lemur,EXCLUDE,EXCLUDE
 5512,lemur,FOUND,lemur
 5512,monkey,FOUND,monkey
 5513,tiger,FOUND,tiger

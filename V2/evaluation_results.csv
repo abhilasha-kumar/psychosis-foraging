@@ -133,7 +133,7 @@ SID,entry,evaluation,replacement
 821,giraffe,FOUND,giraffe
 821,puma,FOUND,puma
 821,python,FOUND,python
-821,boa,FOUND,boa
+821,boa_constrictor,REPLACE,boa constrictor
 821,viper,FOUND,viper
 821,diamondback,FOUND,diamondback
 821,lizard,FOUND,lizard
@@ -350,7 +350,7 @@ SID,entry,evaluation,replacement
 857,dog,FOUND,dog
 857,cat,FOUND,cat
 857,lion,FOUND,lion
-857,sabertoothed tiger,FOUND,sabertoothed tiger
+857,sabertoothed_tiger,REPLACE,sabertoothed tiger
 857,owl,FOUND,owl
 857,bird,FOUND,bird
 857,clownfish,FOUND,clownfish

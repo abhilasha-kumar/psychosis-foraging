@@ -127,7 +127,6 @@ SID,entry
 11,orangutan
 11,havanese dog
 11,dog
-11,asp
 11,snake
 11,garter snake
 11,deer
@@ -421,7 +420,6 @@ SID,entry
 26,praying mantis
 26,butterfly
 26,moth
-28,gnu
 28,fly
 28,deer
 28,polar bear
@@ -445,7 +443,7 @@ SID,entry
 28,viper
 28,sea snake
 28,penguin
-28,mantis
+28,praying mantis
 28,tarantula
 28,black widow
 29,snake
@@ -935,7 +933,6 @@ SID,entry
 56,shrimp
 56,ostrich
 56,tiger
-56,oryx
 56,crab
 56,dolphin
 56,whale
@@ -1002,7 +999,6 @@ SID,entry
 61,chinchilla
 61,ferret
 61,coyote
-61,mice
 62,tiger
 62,lion
 62,parrot
@@ -1495,10 +1491,8 @@ SID,entry
 86,baboon
 86,giraffe
 86,elephant
-86,frog
 86,american toad
 86,bullfrog
-86,frog
 86,northern cricket frog
 86,gray treefrog
 86,eastern newt
@@ -1508,7 +1502,7 @@ SID,entry
 86,beluga whale
 86,whale shark
 86,great white shark
-86,hammerhead
+86,hammerhead shark
 86,blowfish
 86,clownfish
 86,robin
@@ -1660,8 +1654,7 @@ SID,entry
 92,walleye
 92,sturgeon
 92,shark
-92,triggerfish
-92,hammerhead
+92,hammerhead shark
 92,whale
 92,dolphin
 92,seagull
@@ -2159,7 +2152,7 @@ SID,entry
 812,dog
 812,snake
 812,corn snake
-812,boa
+812,boa constrictor
 812,anaconda
 812,human
 812,manatee
@@ -2195,7 +2188,7 @@ SID,entry
 813,fish
 813,snake
 813,stingray
-813,mantis
+813,praying mantis
 813,butterfly
 813,ant
 813,fire ant
@@ -2655,7 +2648,6 @@ SID,entry
 835,ape
 835,insect
 835,spider
-835,ape
 835,elephant
 835,tiger
 835,moonglow boa
@@ -2767,7 +2759,7 @@ SID,entry
 841,elephant
 841,cat
 841,dog
-841,mantis
+841,praying mantis
 841,shrimp
 841,whale
 841,lion
@@ -4051,7 +4043,7 @@ SID,entry
 5508,gorilla
 5508,lizard
 5508,centipede
-5508,poodle
+5508,person
 5508,dinosaur
 5508,bird
 5508,canary
@@ -4123,7 +4115,6 @@ SID,entry
 5512,rat
 5512,cow
 5512,goat
-5512,sika
 5512,lemur
 5512,monkey
 5513,tiger

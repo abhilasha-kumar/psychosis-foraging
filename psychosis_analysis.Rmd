@@ -26,6 +26,109 @@ items = combined %>%
   pivot_wider(names_from = version, values_from = n)
 ```
 
+# norms reorg
+
+```{r}
+troyerexnorms = readxl::read_excel("../norm_data_03_05_24/animals_norm_table_20240304.xlsx") %>%
+  pivot_longer(names_to = "Category", cols = africa:mythological) %>%
+  rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>%
+  mutate(Item = str_replace_all(Item, "_", " "))
+
+write.csv(norms, file = "troyer_extended_lundin_2024_03_04.csv", row.names = FALSE)
+
+snafunorms = read_csv("../forager_nancy/data/norms/animals_snafu_scheme_vocab.csv")
+
+```
+
+
+# snafu vs. troyerextended
+
+```{r}
+v1data = read_csv("V1/switch_results.csv") %>% mutate(v = "V1")
+v2data = read_csv("V2/switch_results.csv") %>% mutate(v = "V2")
+
+snafu = rbind(v1data, v2data) %>% #v1data %>% 
+  filter(Switch_Method == "norms_associative") %>%
+  select(-Switch_Method) %>%
+  rename(norms_snafu_associative = Switch_Value) %>%
+  mutate(Fluency_Item = str_replace_all(Fluency_Item, "_", "")) %>%
+  mutate(Fluency_Item = str_replace_all(Fluency_Item, " ", "")) %>%
+  filter(Fluency_Item != "mammal")
+
+troyerex_v1 = read.delim("../norm_data_03_05_24/troyer_V1_AKcorrected.txt")%>% 
+  mutate(version = "V1")
+troyerex_v2 = read.delim("../norm_data_03_05_24/troyer_V2_AKcorrected.txt")%>% 
+  mutate(version = "V2")
+
+troyerex = rbind(troyerex_v1, troyerex_v2) %>% #troyerex_v1 %>% #
+  select(subject, response, troyer_fluid_switch, troyer_static_switch, version) %>%
+  mutate(response = str_replace_all(response, "_", "")) %>%
+  mutate(response = str_replace_all(response, " ", ""))
+
+# write.csv(snafu, file = "snafu.csv", row.names = FALSE)
+# write.csv(troyerex, file="troyer.csv", row.names = FALSE)
+
+merged_norms = cbind(snafu, troyerex) %>% 
+  mutate(response_match = ifelse(Fluency_Item == response, 1, 0),
+         switch_match = ifelse(norms_snafu_associative == troyer_fluid_switch, 1,0)) %>%
+  filter(norms_snafu_associative != 2) %>% filter(troyer_fluid_switch !=2)
+  
+write.csv(merged_norms, file = "files/merged_snafu_troyerex.csv", row.names = FALSE)
+
+
+# Calculate phi coefficient
+
+final_data = merged_norms %>% filter(version == "V1")
+
+contingency_table = table(final_data$norms_snafu_associative, final_data$troyer_fluid_switch)
+
+phi_coefficient <- psych::phi(contingency_table, digits = 5)
+print(phi_coefficient)
+chisq.test(contingency_table)
+
+## organized
+
+# Assuming your data is in merged_norms dataframe
+phi_results <- merged_norms %>%
+  group_by(version) %>%
+  summarise(
+    contingency_table = list(table(norms_snafu_associative, troyer_fluid_switch)),
+    phi_coefficient = list(psych::phi(table(norms_snafu_associative, troyer_fluid_switch), digits = 5)),
+    chi_square_test = list(chisq.test(table(norms_snafu_associative, troyer_fluid_switch)))
+  )
+
+
+# Print or further manipulate phi_dataframe as needed
+print(phi_results)
+```
+
+# troyerextended comparison
+
+```{r}
+forager_troyerex = rbind(v1data, v2data) %>% 
+  filter(Switch_Method == "troyerextended") %>% 
+  rename(forager_troyerex = Switch_Value) %>%
+  select(-Switch_Method) %>%
+  mutate(Fluency_Item = str_replace_all(Fluency_Item, "_", "")) %>%
+  mutate(Fluency_Item = str_replace_all(Fluency_Item, " ", "")) %>%
+  filter(Fluency_Item != "mammal")
+  
+troyerex = rbind(troyerex_v1, troyerex_v2) %>% 
+  select(subject, response, troyer_fluid_switch, troyer_static_switch, version) %>%
+  mutate(response = str_replace_all(response, "_", "")) %>%
+  mutate(response = str_replace_all(response, " ", ""))
+
+troyerex_compare = cbind(forager_troyerex, troyerex) %>%
+  mutate(response_match = ifelse(Fluency_Item == response, 1, 0),
+         switch_match = ifelse(forager_troyerex == troyer_fluid_switch, 1,0))
+
+write.csv(troyerex_compare, file = "files/troyerex_compare.csv", row.names = FALSE)
+```
+
+
+
+
+
 # basic lexical estimates
 
 ```{r}
@@ -64,6 +167,27 @@ combined_models %>%
   summarize(sumNLL = sum(Negative_Log_Likelihood_Optimized)) %>%
   ungroup() %>% group_by(version) %>%
   filter(sumNLL == min(sumNLL))
-```
 
+# norm_based LLs
+norm_models = combined_models %>% 
+  filter(str_detect(Model, "norms") | str_detect(Model, "troyerextended")) %>%
+  group_by(version, Model) %>%
+  summarize(sumNLL = sum(Negative_Log_Likelihood_Optimized)) %>%
+  separate(Model, into = c("forage", "foraging_model", "norms", "norm_type"))
+# beta estimates
+
+best_betas_automated = combined_models %>% 
+  filter(Model == "forage_phonologicaldynamiclocal_delta_rise=0.25_fall=1.0") %>%
+  pivot_longer(names_to = "beta", cols = Beta_Frequency:Beta_Phonological) %>%
+  group_by(version, beta) %>%
+  summarise(mean_beta = mean(value))
+
+best_betas_norms = combined_models %>% 
+  filter(Model == "forage_phonologicaldynamiclocal_troyerextended") %>%
+  pivot_longer(names_to = "beta", cols = Beta_Frequency:Beta_Phonological) %>%
+  group_by(version, beta) %>%
+  summarise(mean_beta = mean(value))
+
+
+```
 
