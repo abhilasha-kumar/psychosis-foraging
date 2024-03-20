@@ -36,9 +36,28 @@ troyerexnorms = readxl::read_excel("../norm_data_03_05_24/animals_norm_table_202
 
 write.csv(norms, file = "troyer_extended_lundin_2024_03_04.csv", row.names = FALSE)
 
-snafunorms = read_csv("../forager_nancy/data/norms/animals_snafu_scheme_vocab.csv")
+snafunorms = read_csv("../forager/data/norms/animals_snafu_scheme_vocab.csv")
+troyerextended = read_csv("../forager/data/norms/troyer_extended_lundin_2024_03_04.csv")
 
 ```
+
+# forager evaluation add
+
+```{r}
+forager_eval = read_csv("../forager/output/nancy_V2_raw_forager_results/evaluation_results.csv")
+
+snafu_items = snafunorms %>% pull(Item)
+troyerex_items = troyerextended %>% pull(Item)
+
+forager_eval = forager_eval %>% 
+  mutate(entryInSNAFU = ifelse(entry %in% snafu_items, 1, 0),
+         replacementInSNAFU = ifelse(replacement %in% snafu_items, 1, 0),
+         entryInTroyerEx = ifelse(entry %in% troyerex_items, 1, 0),
+         replacementInTroyerEx = ifelse(replacement %in% troyerex_items, 1, 0))
+
+write.csv(forager_eval, file = "files/forager_evaluation_V2.csv", row.names = FALSE)
+```
+
 
 
 # snafu vs. troyerextended
