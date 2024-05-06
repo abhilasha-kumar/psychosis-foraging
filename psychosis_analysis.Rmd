@@ -1,6 +1,8 @@
 ---
 title: "psychosis analysis"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "2024-02-20"
 ---
 
@@ -17,8 +19,8 @@ library(ggthemes)
 # data import
 
 ```{r}
-v1data = read_csv("V1/lexical_results.csv") %>% mutate(version = "V1")
-v2data = read_csv("V2/lexical_results.csv") %>% mutate(version = "V2")
+v1data = read_csv("forager/output/corrected_V1_results/lexical_results.csv") %>% mutate(version = "V1")
+v2data = read_csv("forager/output/corrected_V2_results/lexical_results.csv") %>% mutate(version = "V2")
 combined = rbind(v1data, v2data)
 
 items = combined %>% 
@@ -26,80 +28,27 @@ items = combined %>%
   pivot_wider(names_from = version, values_from = n)
 ```
 
-# norms reorg
-
-```{r}
-troyerexnorms = readxl::read_excel("../norm_data_03_05_24/animals_norm_table_20240304.xlsx") %>%
-  pivot_longer(names_to = "Category", cols = africa:mythological) %>%
-  rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>%
-  mutate(Item = str_replace_all(Item, "_", " "))
-
-write.csv(norms, file = "troyer_extended_lundin_2024_03_04.csv", row.names = FALSE)
-
-snafunorms = read_csv("../forager/data/norms/animals_snafu_scheme_vocab.csv")
-troyerextended = read_csv("../forager/data/norms/troyer_extended_lundin_2024_03_04.csv")
-
-```
-
-# forager evaluation add
-
-```{r}
-forager_eval = read_csv("../forager/output/nancy_V2_raw_forager_results/evaluation_results.csv")
-
-snafu_items = snafunorms %>% pull(Item)
-troyerex_items = troyerextended %>% pull(Item)
-
-forager_eval = forager_eval %>% 
-  mutate(entryInSNAFU = ifelse(entry %in% snafu_items, 1, 0),
-         replacementInSNAFU = ifelse(replacement %in% snafu_items, 1, 0),
-         entryInTroyerEx = ifelse(entry %in% troyerex_items, 1, 0),
-         replacementInTroyerEx = ifelse(replacement %in% troyerex_items, 1, 0))
-
-write.csv(forager_eval, file = "files/forager_evaluation_V2.csv", row.names = FALSE)
-```
-
-
-
 # snafu vs. troyerextended
 
 ```{r}
-v1data = read_csv("V1/switch_results.csv") %>% mutate(v = "V1")
-v2data = read_csv("V2/switch_results.csv") %>% mutate(v = "V2")
+switchv1data = read_csv("forager/output/corrected_V1_results/switch_results.csv") %>% 
+  mutate(v = "V1")
+switchv2data = read_csv("forager/output/corrected_V2_results/switch_results.csv") %>% 
+  mutate(v = "V2")
 
-snafu = rbind(v1data, v2data) %>% #v1data %>% 
-  filter(Switch_Method == "norms_associative") %>%
-  select(-Switch_Method) %>%
-  rename(norms_snafu_associative = Switch_Value) %>%
-  mutate(Fluency_Item = str_replace_all(Fluency_Item, "_", "")) %>%
-  mutate(Fluency_Item = str_replace_all(Fluency_Item, " ", "")) %>%
-  filter(Fluency_Item != "mammal")
-
-troyerex_v1 = read.delim("../norm_data_03_05_24/troyer_V1_AKcorrected.txt")%>% 
-  mutate(version = "V1")
-troyerex_v2 = read.delim("../norm_data_03_05_24/troyer_V2_AKcorrected.txt")%>% 
-  mutate(version = "V2")
-
-troyerex = rbind(troyerex_v1, troyerex_v2) %>% #troyerex_v1 %>% #
-  select(subject, response, troyer_fluid_switch, troyer_static_switch, version) %>%
-  mutate(response = str_replace_all(response, "_", "")) %>%
-  mutate(response = str_replace_all(response, " ", ""))
-
-# write.csv(snafu, file = "snafu.csv", row.names = FALSE)
-# write.csv(troyerex, file="troyer.csv", row.names = FALSE)
-
-merged_norms = cbind(snafu, troyerex) %>% 
-  mutate(response_match = ifelse(Fluency_Item == response, 1, 0),
-         switch_match = ifelse(norms_snafu_associative == troyer_fluid_switch, 1,0)) %>%
-  filter(norms_snafu_associative != 2) %>% filter(troyer_fluid_switch !=2)
+merged_norms = rbind(switchv1data, switchv2data) %>% 
+  filter(Switch_Method %in% c("norms_associative", "troyerextended")) %>% 
+  group_by(Subject, Switch_Method) %>%
+  mutate(response_number = row_number())%>%
+  pivot_wider(names_from = Switch_Method, values_from = Switch_Value) %>%
+  mutate(switch_match = ifelse(norms_associative == troyerextended, 1,0)) %>%
+  filter(norms_associative != 2) %>% filter(troyerextended !=2)
   
-write.csv(merged_norms, file = "files/merged_snafu_troyerex.csv", row.names = FALSE)
-
-
 # Calculate phi coefficient
 
-final_data = merged_norms %>% filter(version == "V1")
+final_data = merged_norms %>% filter(v == "V1")
 
-contingency_table = table(final_data$norms_snafu_associative, final_data$troyer_fluid_switch)
+contingency_table = table(final_data$norms_associative, final_data$troyerextended)
 
 phi_coefficient <- psych::phi(contingency_table, digits = 5)
 print(phi_coefficient)
@@ -109,44 +58,18 @@ chisq.test(contingency_table)
 
 # Assuming your data is in merged_norms dataframe
 phi_results <- merged_norms %>%
-  group_by(version) %>%
+  group_by(v) %>%
   summarise(
-    contingency_table = list(table(norms_snafu_associative, troyer_fluid_switch)),
-    phi_coefficient = list(psych::phi(table(norms_snafu_associative, troyer_fluid_switch), digits = 5)),
-    chi_square_test = list(chisq.test(table(norms_snafu_associative, troyer_fluid_switch)))
+    contingency_table = list(table(norms_associative, troyerextended)),
+    phi_coefficient = list(psych::phi(table(norms_associative, troyerextended), 
+                                      digits = 5)),
+    chi_square_test = list(chisq.test(table(norms_associative, troyerextended)))
   )
 
 
 # Print or further manipulate phi_dataframe as needed
-print(phi_results)
+phi_results
 ```
-
-# troyerextended comparison
-
-```{r}
-forager_troyerex = rbind(v1data, v2data) %>% 
-  filter(Switch_Method == "troyerextended") %>% 
-  rename(forager_troyerex = Switch_Value) %>%
-  select(-Switch_Method) %>%
-  mutate(Fluency_Item = str_replace_all(Fluency_Item, "_", "")) %>%
-  mutate(Fluency_Item = str_replace_all(Fluency_Item, " ", "")) %>%
-  filter(Fluency_Item != "mammal")
-  
-troyerex = rbind(troyerex_v1, troyerex_v2) %>% 
-  select(subject, response, troyer_fluid_switch, troyer_static_switch, version) %>%
-  mutate(response = str_replace_all(response, "_", "")) %>%
-  mutate(response = str_replace_all(response, " ", ""))
-
-troyerex_compare = cbind(forager_troyerex, troyerex) %>%
-  mutate(response_match = ifelse(Fluency_Item == response, 1, 0),
-         switch_match = ifelse(forager_troyerex == troyer_fluid_switch, 1,0))
-
-write.csv(troyerex_compare, file = "files/troyerex_compare.csv", row.names = FALSE)
-```
-
-
-
-
 
 # basic lexical estimates
 
@@ -161,7 +84,7 @@ lexical_mean = combined %>%
   pivot_longer(names_to = "cue", cols = semantic:phon)
 
 lexical_mean %>% 
-  filter(cue == "frequency")%>%
+  filter(cue == "phon")%>%
   ggplot(aes(x = version, y = value, 
              group = Subject, color = Subject)) +
   geom_point()+
@@ -172,8 +95,10 @@ lexical_mean %>%
 # best model
 
 ```{r}
-v1models = read_csv("V1/model_results.csv") %>% mutate(version = "V1")
-v2models = read_csv("V2/model_results.csv") %>% mutate(version = "V2")
+v1models = read_csv("forager/output/corrected_V1_results/model_results.csv") %>%
+  mutate(version = "V1")
+v2models = read_csv("forager/output/corrected_V2_results/model_results.csv") %>%
+  mutate(version = "V2")
 combined_models = rbind(v1models, v2models)
 
 # confirm no missing nLLs
@@ -196,7 +121,7 @@ norm_models = combined_models %>%
 # beta estimates
 
 best_betas_automated = combined_models %>% 
-  filter(Model == "forage_phonologicaldynamiclocal_delta_rise=0.25_fall=1.0") %>%
+  filter(Model == "forage_phonologicaldynamiclocal_delta_rise=0.0_fall=1.0") %>%
   pivot_longer(names_to = "beta", cols = Beta_Frequency:Beta_Phonological) %>%
   group_by(version, beta) %>%
   summarise(mean_beta = mean(value))
@@ -210,3 +135,119 @@ best_betas_norms = combined_models %>%
 
 ```
 
+<!-- # OLD CODE -->
+<!-- ## norms reorg -->
+
+<!-- ```{r} -->
+<!-- troyerexnorms = readxl::read_excel("../norm_data_03_05_24/animals_norm_table_20240304.xlsx") %>% -->
+<!--   pivot_longer(names_to = "Category", cols = africa:mythological) %>% -->
+<!--   rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>% -->
+<!--   mutate(Item = str_replace_all(Item, "_", " ")) -->
+
+<!-- write.csv(norms, file = "troyer_extended_lundin_2024_03_04.csv", row.names = FALSE) -->
+
+<!-- snafunorms = read_csv("../forager/data/norms/animals_snafu_scheme_vocab.csv") -->
+<!-- troyerextended = read_csv("../forager/data/norms/troyer_extended_lundin_2024_03_04.csv") -->
+
+<!-- ``` -->
+
+<!-- ## forager evaluation add -->
+
+<!-- ```{r} -->
+<!-- forager_eval = read_csv("../forager/output/nancy_V2_raw_forager_results/evaluation_results.csv") -->
+
+<!-- snafu_items = snafunorms %>% pull(Item) -->
+<!-- troyerex_items = troyerextended %>% pull(Item) -->
+
+<!-- forager_eval = forager_eval %>%  -->
+<!--   mutate(entryInSNAFU = ifelse(entry %in% snafu_items, 1, 0), -->
+<!--          replacementInSNAFU = ifelse(replacement %in% snafu_items, 1, 0), -->
+<!--          entryInTroyerEx = ifelse(entry %in% troyerex_items, 1, 0), -->
+<!--          replacementInTroyerEx = ifelse(replacement %in% troyerex_items, 1, 0)) -->
+
+<!-- write.csv(forager_eval, file = "files/forager_evaluation_V2.csv", row.names = FALSE) -->
+<!-- ``` -->
+
+<!-- ## OLD snafu vs. troyerextended -->
+
+<!-- ```{r} -->
+<!-- v1data = read_csv("V1/switch_results.csv") %>% mutate(v = "V1") -->
+<!-- v2data = read_csv("V2/switch_results.csv") %>% mutate(v = "V2") -->
+
+<!-- snafu = rbind(v1data, v2data) %>% #v1data %>%  -->
+<!--   filter(Switch_Method == "norms_associative") %>% -->
+<!--   select(-Switch_Method) %>% -->
+<!--   rename(norms_snafu_associative = Switch_Value) %>% -->
+<!--   mutate(Fluency_Item = str_replace_all(Fluency_Item, "_", "")) %>% -->
+<!--   mutate(Fluency_Item = str_replace_all(Fluency_Item, " ", "")) %>% -->
+<!--   filter(Fluency_Item != "mammal") -->
+
+<!-- troyerex_v1 = read.delim("../norm_data_03_05_24/troyer_V1_AKcorrected.txt")%>%  -->
+<!--   mutate(version = "V1") -->
+<!-- troyerex_v2 = read.delim("../norm_data_03_05_24/troyer_V2_AKcorrected.txt")%>%  -->
+<!--   mutate(version = "V2") -->
+
+<!-- troyerex = rbind(troyerex_v1, troyerex_v2) %>% #troyerex_v1 %>% # -->
+<!--   select(subject, response, troyer_fluid_switch, troyer_static_switch, version) %>% -->
+<!--   mutate(response = str_replace_all(response, "_", "")) %>% -->
+<!--   mutate(response = str_replace_all(response, " ", "")) -->
+
+<!-- # write.csv(snafu, file = "snafu.csv", row.names = FALSE) -->
+<!-- # write.csv(troyerex, file="troyer.csv", row.names = FALSE) -->
+
+<!-- merged_norms = cbind(snafu, troyerex) %>%  -->
+<!--   mutate(response_match = ifelse(Fluency_Item == response, 1, 0), -->
+<!--          switch_match = ifelse(norms_snafu_associative == troyer_fluid_switch, 1,0)) %>% -->
+<!--   filter(norms_snafu_associative != 2) %>% filter(troyer_fluid_switch !=2) -->
+
+<!-- write.csv(merged_norms, file = "files/merged_snafu_troyerex.csv", row.names = FALSE) -->
+
+
+<!-- # Calculate phi coefficient -->
+
+<!-- final_data = merged_norms %>% filter(version == "V1") -->
+
+<!-- contingency_table = table(final_data$norms_snafu_associative, final_data$troyer_fluid_switch) -->
+
+<!-- phi_coefficient <- psych::phi(contingency_table, digits = 5) -->
+<!-- print(phi_coefficient) -->
+<!-- chisq.test(contingency_table) -->
+
+<!-- ## organized -->
+
+<!-- # Assuming your data is in merged_norms dataframe -->
+<!-- phi_results <- merged_norms %>% -->
+<!--   group_by(version) %>% -->
+<!--   summarise( -->
+<!--     contingency_table = list(table(norms_snafu_associative, troyer_fluid_switch)), -->
+<!--     phi_coefficient = list(psych::phi(table(norms_snafu_associative, troyer_fluid_switch), digits = 5)), -->
+<!--     chi_square_test = list(chisq.test(table(norms_snafu_associative, troyer_fluid_switch))) -->
+<!--   ) -->
+
+
+<!-- # Print or further manipulate phi_dataframe as needed -->
+<!-- print(phi_results) -->
+<!-- ``` -->
+
+<!-- ## OLD troyerextended comparison -->
+
+<!-- ```{r} -->
+<!-- forager_troyerex = rbind(v1data, v2data) %>%  -->
+<!--   filter(Switch_Method == "troyerextended") %>%  -->
+<!--   rename(forager_troyerex = Switch_Value) %>% -->
+<!--   select(-Switch_Method) %>% -->
+<!--   mutate(Fluency_Item = str_replace_all(Fluency_Item, "_", "")) %>% -->
+<!--   mutate(Fluency_Item = str_replace_all(Fluency_Item, " ", "")) %>% -->
+<!--   filter(Fluency_Item != "mammal") -->
+
+<!-- troyerex = rbind(troyerex_v1, troyerex_v2) %>%  -->
+<!--   select(subject, response, troyer_fluid_switch, troyer_static_switch, version) %>% -->
+<!--   mutate(response = str_replace_all(response, "_", "")) %>% -->
+<!--   mutate(response = str_replace_all(response, " ", "")) -->
+
+<!-- troyerex_compare = cbind(forager_troyerex, troyerex) %>% -->
+<!--   mutate(response_match = ifelse(Fluency_Item == response, 1, 0), -->
+<!--          switch_match = ifelse(forager_troyerex == troyer_fluid_switch, 1,0)) -->
+
+<!-- write.csv(troyerex_compare, file = "files/troyerex_compare.csv", row.names = FALSE) -->
+<!-- ``` -->
