@@ -19,11 +19,14 @@ library(ggthemes)
 ```{r}
 v1data = read_csv("forager/output/corrected_V1_results/lexical_results.csv") %>% mutate(version = "V1")
 v2data = read_csv("forager/output/corrected_V2_results/lexical_results.csv") %>% mutate(version = "V2")
-combined = rbind(v1data, v2data)
+combinedlexical = rbind(v1data, v2data)
 
-items = combined %>% 
+items = combinedlexical %>% 
   group_by(version, Subject) %>% count() %>%
   pivot_wider(names_from = version, values_from = n)
+
+write.csv(combinedlexical, "results/subject_lexical_results.csv", row.names = FALSE)
+
 ```
 
 # snafu vs. troyerextended
