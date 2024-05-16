@@ -6,12 +6,10 @@ output:
 date: "2024-02-20"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 # package import
 
-```{r}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggthemes)
 ```
@@ -35,6 +33,8 @@ switchv1data = read_csv("forager/output/corrected_V1_results/switch_results.csv"
   mutate(v = "V1")
 switchv2data = read_csv("forager/output/corrected_V2_results/switch_results.csv") %>% 
   mutate(v = "V2")
+
+combinedswitch = rbind(switchv1data, switchv2data) 
 
 merged_norms = rbind(switchv1data, switchv2data) %>% 
   filter(Switch_Method %in% c("norms_associative", "troyerextended")) %>% 
@@ -112,28 +112,63 @@ combined_models %>%
   ungroup() %>% group_by(version) %>%
   filter(sumNLL == min(sumNLL))
 
+best_model_name = "forage_phonologicaldynamiclocal_delta_rise=0.0_fall=1.0"
+
 # norm_based LLs
-norm_models = combined_models %>% 
-  filter(str_detect(Model, "norms") | str_detect(Model, "troyerextended")) %>%
-  group_by(version, Model) %>%
-  summarize(sumNLL = sum(Negative_Log_Likelihood_Optimized)) %>%
-  separate(Model, into = c("forage", "foraging_model", "norms", "norm_type"))
-# beta estimates
+best_betas = combined_models %>% 
+  filter(str_detect(Model, "phonologicaldynamiclocal_simdrop") | 
+           str_detect(Model, "phonologicaldynamiclocal_troyerextended") |
+           str_detect(Model, "phonologicaldynamiclocal_delta_rise=0.0_fall=1.0"))
 
-best_betas_automated = combined_models %>% 
-  filter(Model == "forage_phonologicaldynamiclocal_delta_rise=0.0_fall=1.0") %>%
-  pivot_longer(names_to = "beta", cols = Beta_Frequency:Beta_Phonological) %>%
-  group_by(version, beta) %>%
-  summarise(mean_beta = mean(value))
+write.csv(best_betas, "results/subject_salience_values.csv", row.names = FALSE)
 
-best_betas_norms = combined_models %>% 
-  filter(Model == "forage_phonologicaldynamiclocal_troyerextended") %>%
-  pivot_longer(names_to = "beta", cols = Beta_Frequency:Beta_Phonological) %>%
-  group_by(version, beta) %>%
-  summarise(mean_beta = mean(value))
+best_betas_overall = best_betas %>%
+  pivot_longer(names_to = "parameter", cols=Beta_Frequency:Beta_Phonological) %>%
+  group_by(version, Model, parameter) %>%
+  summarize(mean_value = mean(value))  %>%
+  pivot_wider(names_from = parameter, values_from = mean_value)
 
+write.csv(best_betas_overall, "results/overall_salience_values.csv", row.names = FALSE)
+```
+
+# individual results
+
+```{r}
+combinedswitch = combinedswitch %>% filter(Switch_Method %in% 
+                                             c("troyerextended", "simdrop", 
+                                               "delta_rise=0.0_fall=1.0"))
+
+write.csv(combinedswitch, "results/subject_switch_results.csv", row.names = FALSE)
+
+# individual results
+
+individual_stats1 = read_csv("forager/output/corrected_V1_results/individual_descriptive_stats.csv") %>%
+  mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
+                                                         "troyerextended")) %>%
+  select(Subject, Switch_Method:version)
+
+individual_stats2 = read_csv("forager/output/corrected_V2_results/individual_descriptive_stats.csv") %>%
+  mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
+                                                         "troyerextended")) %>%
+  select(Subject, Switch_Method:version)
+
+combined_individual = rbind(individual_stats1, individual_stats2)
+
+write.csv(combined_individual, "results/subject_individual_stats.csv", row.names = FALSE)
 
 ```
+
+# norms
+
+```{r}
+troyerexnorms = readxl::read_excel("../evaluation_03_22_24/animals_norm_table_20240322.xlsx") %>%
+  pivot_longer(names_to = "Category", cols = africa:mythological) %>%
+  rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>%
+  mutate(Item = str_replace_all(Item, "_", " "))
+
+write.csv(troyerexnorms, file = "../forager_psychosis/data/norms/troyer_extended_lundin_2024_03_22.csv", row.names = FALSE)
+```
+
 
 <!-- # OLD CODE -->
 <!-- ## norms reorg -->
