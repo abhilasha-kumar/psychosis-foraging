@@ -17,7 +17,7 @@ library(ggthemes)
 # data import
 
 ```{r}
-v1data = read_csv("forager_psychosis/output/lexical_results.csv") %>% mutate(version = "V1")
+v1data = read_csv("forager_results/output/lexical_results.csv") %>% mutate(version = "V1")
 # v2data = read_csv("forager/output/corrected_V2_results/lexical_results.csv") %>% mutate(version = "V2")
 combinedlexical = v1data #rbind(v1data, v2data)
 # 
@@ -32,7 +32,7 @@ write.csv(v1data, "results_new/subject_lexical_results.csv", row.names = FALSE)
 # snafu vs. troyerextended
 
 ```{r}
-switchv1data = read_csv("forager_psychosis/output/switch_results.csv") %>% 
+switchv1data = read_csv("forager_results/output/switch_results.csv") %>% 
   mutate(v = "V1")
 # switchv2data = read_csv("forager/output/corrected_V2_results/switch_results.csv") %>% 
 #   mutate(v = "V2")
@@ -107,7 +107,7 @@ lexical_mean %>%
 # best model
 
 ```{r}
-v1models = read_csv("forager_psychosis/output/model_results.csv") %>%
+v1models = read_csv("forager_results/output/model_results.csv") %>%
   mutate(version = "V1")
 # v2models = read_csv("forager/output/corrected_V2_results/model_results.csv") %>%
 #   mutate(version = "V2")
@@ -156,7 +156,7 @@ write.csv(combinedswitch, "results_new/subject_switch_results.csv", row.names = 
 
 # individual results
 
-individual_stats1 = read_csv("forager_psychosis/output/individual_descriptive_stats.csv") %>%
+individual_stats1 = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
   mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
                                                          "troyerextended")) %>%
   select(Subject, Switch_Method:version)
@@ -180,7 +180,7 @@ write.csv(combined_individual, "results_new/subject_individual_stats.csv", row.n
 <!--   rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>% -->
 <!--   mutate(Item = str_replace_all(Item, "_", " ")) -->
 
-<!-- write.csv(troyerexnorms, file = "../forager_psychosis/data/norms/troyer_extended_lundin_2024_03_22.csv", row.names = FALSE) -->
+<!-- write.csv(troyerexnorms, file = "../forager_results/data/norms/troyer_extended_lundin_2024_03_22.csv", row.names = FALSE) -->
 <!-- ``` -->
 
 

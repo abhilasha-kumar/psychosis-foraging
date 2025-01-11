@@ -1,0 +1,16 @@
+SID,entry,evaluation,replacement,edit_distance
+63,red stag,REPLACE,red deer,4
+86,common gray treefrog,REPLACE,gray treefrog,7
+86,red spotted newt,REPLACE,eastern newt,8
+86,american eagle,REPLACE,bald eagle,8
+86,golden macaw,REPLACE,macaw,7
+97,green anole,REPLACE,anole,6
+804,kiwi bird,REPLACE,kiwi,5
+835,albino tiger,REPLACE,white tiger,5
+835,wild cod,REPLACE,cod,5
+840,cotton mouth snake,REPLACE,cottonmouth,7
+847,sea manatee,REPLACE,manatee,4
+872,green python,REPLACE,green tree python,5
+872,kiwi bird,REPLACE,kiwi,5
+872,black leopard,REPLACE,black panther,7
+5508,people,REPLACE,person,4
