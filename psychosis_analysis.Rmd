@@ -25,7 +25,7 @@ combinedlexical = v1data #rbind(v1data, v2data)
 #   group_by(version, Subject) %>% count() %>%
 #   pivot_wider(names_from = version, values_from = n)
 
-write.csv(v1data, "results_new/subject_lexical_results.csv", row.names = FALSE)
+write.csv(v1data, "results/subject_lexical_results.csv", row.names = FALSE)
 
 ```
 
@@ -134,7 +134,7 @@ best_betas = combined_models %>%
            str_detect(Model, "phonologicaldynamiclocal_troyerextended") |
            str_detect(Model, "phonologicaldynamiclocal_delta_rise=0.0_fall=1.0"))
 
-write.csv(best_betas, "results_new/subject_salience_values.csv", row.names = FALSE)
+write.csv(best_betas, "results/subject_salience_values.csv", row.names = FALSE)
 
 best_betas_overall = best_betas %>%
   pivot_longer(names_to = "parameter", cols=Beta_Frequency:Beta_Phonological) %>%
@@ -142,7 +142,7 @@ best_betas_overall = best_betas %>%
   summarize(mean_value = mean(value))  %>%
   pivot_wider(names_from = parameter, values_from = mean_value)
 
-write.csv(best_betas_overall, "results_new/overall_salience_values.csv", row.names = FALSE)
+write.csv(best_betas_overall, "results/overall_salience_values.csv", row.names = FALSE)
 ```
 
 # individual results
@@ -152,7 +152,7 @@ combinedswitch = combinedswitch %>% filter(Switch_Method %in%
                                              c("troyerextended", "simdrop", 
                                                "delta_rise=0.0_fall=1.0"))
 
-write.csv(combinedswitch, "results_new/subject_switch_results.csv", row.names = FALSE)
+write.csv(combinedswitch, "results/subject_switch_results.csv", row.names = FALSE)
 
 # individual results
 
@@ -168,7 +168,7 @@ individual_stats1 = read_csv("forager_results/output/individual_descriptive_stat
 
 combined_individual = individual_stats1# rbind(individual_stats1, individual_stats2)
 
-write.csv(combined_individual, "results_new/subject_individual_stats.csv", row.names = FALSE)
+write.csv(combined_individual, "results/subject_individual_stats.csv", row.names = FALSE)
 
 ```
 
