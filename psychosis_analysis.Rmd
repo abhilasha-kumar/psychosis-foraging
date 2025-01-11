@@ -17,29 +17,38 @@ library(ggthemes)
 # data import
 
 ```{r}
-v1data = read_csv("forager/output/corrected_V1_results/lexical_results.csv") %>% mutate(version = "V1")
-v2data = read_csv("forager/output/corrected_V2_results/lexical_results.csv") %>% mutate(version = "V2")
-combinedlexical = rbind(v1data, v2data)
+v1data = read_csv("forager_psychosis/output/lexical_results.csv") %>% mutate(version = "V1")
+# v2data = read_csv("forager/output/corrected_V2_results/lexical_results.csv") %>% mutate(version = "V2")
+combinedlexical = v1data #rbind(v1data, v2data)
+# 
+# items = combinedlexical %>% 
+#   group_by(version, Subject) %>% count() %>%
+#   pivot_wider(names_from = version, values_from = n)
 
-items = combinedlexical %>% 
-  group_by(version, Subject) %>% count() %>%
-  pivot_wider(names_from = version, values_from = n)
-
-write.csv(combinedlexical, "results/subject_lexical_results.csv", row.names = FALSE)
+write.csv(v1data, "results_new/subject_lexical_results.csv", row.names = FALSE)
 
 ```
 
 # snafu vs. troyerextended
 
 ```{r}
-switchv1data = read_csv("forager/output/corrected_V1_results/switch_results.csv") %>% 
+switchv1data = read_csv("forager_psychosis/output/switch_results.csv") %>% 
   mutate(v = "V1")
-switchv2data = read_csv("forager/output/corrected_V2_results/switch_results.csv") %>% 
-  mutate(v = "V2")
+# switchv2data = read_csv("forager/output/corrected_V2_results/switch_results.csv") %>% 
+#   mutate(v = "V2")
 
-combinedswitch = rbind(switchv1data, switchv2data) 
+combinedswitch = switchv1data #rbind(switchv1data, switchv2data) 
 
-merged_norms = rbind(switchv1data, switchv2data) %>% 
+## check if multimodal alpha = 1 is identical to delta 
+
+switchv1data %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0",
+                                               "multimodaldelta_alpha=1.0_rise=0.0_fall=1.0")) %>%
+  group_by(Subject, Switch_Method) %>% mutate(item = row_number()) %>%
+  pivot_wider(names_from = Switch_Method, values_from = Switch_Value) %>%
+  mutate(eq = `delta_rise=0.0_fall=1.0` == `multimodaldelta_alpha=1.0_rise=0.0_fall=1.0`) %>%
+  filter(!eq)
+
+merged_norms = switchv1data %>% #rbind(switchv1data, switchv2data) %>% 
   filter(Switch_Method %in% c("norms_associative", "troyerextended")) %>% 
   group_by(Subject, Switch_Method) %>%
   mutate(response_number = row_number())%>%
@@ -77,7 +86,7 @@ phi_results
 # basic lexical estimates
 
 ```{r}
-lexical_mean = combined %>% 
+lexical_mean = combinedlexical %>% 
   group_by(version, Subject) %>%
   mutate(itemno = row_number()) %>%
   filter(itemno != 1) %>%
@@ -98,11 +107,12 @@ lexical_mean %>%
 # best model
 
 ```{r}
-v1models = read_csv("forager/output/corrected_V1_results/model_results.csv") %>%
+v1models = read_csv("forager_psychosis/output/model_results.csv") %>%
   mutate(version = "V1")
-v2models = read_csv("forager/output/corrected_V2_results/model_results.csv") %>%
-  mutate(version = "V2")
-combined_models = rbind(v1models, v2models)
+# v2models = read_csv("forager/output/corrected_V2_results/model_results.csv") %>%
+#   mutate(version = "V2")
+#combined_models = rbind(v1models, v2models)
+combined_models = v1models
 
 # confirm no missing nLLs
 which(is.na(combined_models$Negative_Log_Likelihood_Optimized))
@@ -115,7 +125,8 @@ combined_models %>%
   ungroup() %>% group_by(version) %>%
   filter(sumNLL == min(sumNLL))
 
-best_model_name = "forage_phonologicaldynamiclocal_delta_rise=0.0_fall=1.0"
+best_model_name = "phonologicaldynamiclocal_delta_rise_rise=0.0_fall=1.0"
+## same as delta
 
 # norm_based LLs
 best_betas = combined_models %>% 
@@ -123,7 +134,7 @@ best_betas = combined_models %>%
            str_detect(Model, "phonologicaldynamiclocal_troyerextended") |
            str_detect(Model, "phonologicaldynamiclocal_delta_rise=0.0_fall=1.0"))
 
-write.csv(best_betas, "results/subject_salience_values.csv", row.names = FALSE)
+write.csv(best_betas, "results_new/subject_salience_values.csv", row.names = FALSE)
 
 best_betas_overall = best_betas %>%
   pivot_longer(names_to = "parameter", cols=Beta_Frequency:Beta_Phonological) %>%
@@ -131,7 +142,7 @@ best_betas_overall = best_betas %>%
   summarize(mean_value = mean(value))  %>%
   pivot_wider(names_from = parameter, values_from = mean_value)
 
-write.csv(best_betas_overall, "results/overall_salience_values.csv", row.names = FALSE)
+write.csv(best_betas_overall, "results_new/overall_salience_values.csv", row.names = FALSE)
 ```
 
 # individual results
@@ -141,36 +152,36 @@ combinedswitch = combinedswitch %>% filter(Switch_Method %in%
                                              c("troyerextended", "simdrop", 
                                                "delta_rise=0.0_fall=1.0"))
 
-write.csv(combinedswitch, "results/subject_switch_results.csv", row.names = FALSE)
+write.csv(combinedswitch, "results_new/subject_switch_results.csv", row.names = FALSE)
 
 # individual results
 
-individual_stats1 = read_csv("forager/output/corrected_V1_results/individual_descriptive_stats.csv") %>%
+individual_stats1 = read_csv("forager_psychosis/output/individual_descriptive_stats.csv") %>%
   mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
                                                          "troyerextended")) %>%
   select(Subject, Switch_Method:version)
 
-individual_stats2 = read_csv("forager/output/corrected_V2_results/individual_descriptive_stats.csv") %>%
-  mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
-                                                         "troyerextended")) %>%
-  select(Subject, Switch_Method:version)
+# individual_stats2 = read_csv("forager/output/corrected_V2_results/individual_descriptive_stats.csv") %>%
+#   mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
+#                                                          "troyerextended")) %>%
+#   select(Subject, Switch_Method:version)
 
-combined_individual = rbind(individual_stats1, individual_stats2)
+combined_individual = individual_stats1# rbind(individual_stats1, individual_stats2)
 
-write.csv(combined_individual, "results/subject_individual_stats.csv", row.names = FALSE)
+write.csv(combined_individual, "results_new/subject_individual_stats.csv", row.names = FALSE)
 
 ```
 
-# norms
+<!-- # norms -->
 
-```{r}
-troyerexnorms = readxl::read_excel("../evaluation_03_22_24/animals_norm_table_20240322.xlsx") %>%
-  pivot_longer(names_to = "Category", cols = africa:mythological) %>%
-  rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>%
-  mutate(Item = str_replace_all(Item, "_", " "))
+<!-- ```{r} -->
+<!-- troyerexnorms = readxl::read_excel("../evaluation_03_22_24/animals_norm_table_20240322.xlsx") %>% -->
+<!--   pivot_longer(names_to = "Category", cols = africa:mythological) %>% -->
+<!--   rename(Item = value) %>% arrange(Category) %>% filter(!is.na(Item)) %>% -->
+<!--   mutate(Item = str_replace_all(Item, "_", " ")) -->
 
-write.csv(troyerexnorms, file = "../forager_psychosis/data/norms/troyer_extended_lundin_2024_03_22.csv", row.names = FALSE)
-```
+<!-- write.csv(troyerexnorms, file = "../forager_psychosis/data/norms/troyer_extended_lundin_2024_03_22.csv", row.names = FALSE) -->
+<!-- ``` -->
 
 
 <!-- # OLD CODE -->
