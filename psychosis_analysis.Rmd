@@ -172,6 +172,39 @@ write.csv(combined_individual, "results/subject_individual_stats.csv", row.names
 
 ```
 
+# checking
+```{r}
+matlab = read.delim("MATLAB_summary_results.txt", sep = "\t")
+forager = read_csv("forager_results/output/individual_descriptive_stats.csv") 
+# troyer
+switch_metrics = forager %>% filter(Switch_Method == "troyerextended") %>%
+  select(Subject,Switch_Method:Cluster_Size_std)
+
+# delta
+
+switch_metrics = forager %>% filter(Switch_Method == "delta_rise=0.0_fall=1.0") %>%
+  select(Subject,Switch_Method:Cluster_Size_std)
+
+
+all_metrics = forager %>% filter(!is.na(Semantic_Similarity_mean)) %>%
+  select(Subject: `#_of_Items`) %>% left_join(switch_metrics)
+
+stopifnot(round(all_metrics$Semantic_Similarity_mean,2) == round(matlab$mean_overall_semantic_sim,2))
+stopifnot(round(all_metrics$`#_of_Items`,2) == round(matlab$total_responses,2 ))
+## troyer
+stopifnot(round(all_metrics$Number_of_Switches,2) == round(matlab$switch_count_troyerF,2 ))
+stopifnot(round(all_metrics$Cluster_Size_mean,2) == round(matlab$mean_cluster_size_with_singletons_troyerF,2 ))
+
+## delta
+
+stopifnot(round(all_metrics$Number_of_Switches,2) == round(matlab$switch_count_delta,2 ))
+stopifnot(round(all_metrics$Cluster_Size_mean,2) == round(matlab$mean_cluster_size_with_singletons_delta,2 ))
+
+
+
+```
+
+
 <!-- # norms -->
 
 <!-- ```{r} -->
