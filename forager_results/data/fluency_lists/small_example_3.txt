@@ -1,0 +1,21 @@
+SID	item
+5	monkey
+5	giraffe
+5	elephant
+5	tiger
+5	cheetah
+5	lion
+5	kangaroo
+5	opossum
+5	raccoon
+5	quokka
+5	cat
+5	dog
+5	bird
+5	parrot
+5	turtle
+5	fish
+5	whale
+5	starfish
+5	honey badger
+5	wombat
