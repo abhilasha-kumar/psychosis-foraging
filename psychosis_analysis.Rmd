@@ -55,7 +55,8 @@ subjectBICs = combined_models %>%
   group_by(Subject) %>%
   mutate(BIC = k * log(n) - 2 * (-Negative_Log_Likelihood_Optimized))
   
-subject_best_model_stats =subjectBICs %>% filter(BIC == min(BIC))
+subject_best_model_stats =subjectBICs %>% group_by(Subject) %>%
+  slice_min(BIC)
 
 write.csv(subject_best_model_stats, 
           "results/individual_best_models.csv", row.names = FALSE)
