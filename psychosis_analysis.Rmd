@@ -14,18 +14,141 @@ library(tidyverse)
 library(ggthemes)
 ```
 
-# data import
+# data import + lexical
 
 ```{r}
-v1data = read_csv("forager_results/output/lexical_results.csv") %>% mutate(version = "V1")
-# v2data = read_csv("forager/output/corrected_V2_results/lexical_results.csv") %>% mutate(version = "V2")
-combinedlexical = v1data #rbind(v1data, v2data)
-# 
-# items = combinedlexical %>% 
-#   group_by(version, Subject) %>% count() %>%
-#   pivot_wider(names_from = version, values_from = n)
+final_subjects = readxl::read_excel("final_subjects_for_AK_analysis.xlsx") %>%
+  pull(subject)
+
+v1data = read_csv("forager_results/output/lexical_results.csv") %>% 
+  mutate(version = "V1") %>%
+  filter(Subject %in% final_subjects)
 
 write.csv(v1data, "results/subject_lexical_results.csv", row.names = FALSE)
+
+```
+
+
+# best model
+
+## individual best models
+
+```{r}
+
+v1models = read_csv("forager_results/output/model_results.csv") %>%
+  mutate(version = "V1")%>%
+  filter(Subject %in% final_subjects)
+
+combined_models = v1models
+
+# confirm no missing nLLs
+which(is.na(combined_models$Negative_Log_Likelihood_Optimized))
+
+parameter_file = read_csv("parameters.csv")
+subject_scores = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
+  rename(n = `#_of_Items`) %>%
+  select(Subject, n) %>% filter(!is.na(n)) %>%
+  filter(Subject %in% final_subjects)
+
+subjectBICs = combined_models %>% 
+  left_join(parameter_file) %>% left_join(subject_scores)%>%
+  group_by(Subject) %>%
+  mutate(BIC = k * log(n) - 2 * (-Negative_Log_Likelihood_Optimized))
+  
+subject_best_model_stats =subjectBICs %>% filter(BIC == min(BIC))
+
+write.csv(subject_best_model_stats, 
+          "results/individual_best_models.csv", row.names = FALSE)
+
+```
+
+## best overall models
+```{r}
+randomBICs = subjectBICs %>%
+  filter(Model == "forage_random_baseline") %>%
+  select(Subject, BIC) %>%
+  rename(randomBIC = BIC)
+
+modelBICs = subjectBICs %>% 
+  left_join(randomBICs)%>%
+  mutate(deltaBIC = randomBIC - BIC) %>%
+  group_by(version, Model) %>%
+  summarise(meanBIC = mean(deltaBIC)) 
+
+best_model_name = modelBICs %>%
+  arrange(desc(meanBIC)) %>%
+  slice(1) %>% 
+  ungroup() %>%
+  pull(Model)
+
+# norm_based LLs
+best_betas = subjectBICs %>% 
+  filter(str_detect(Model, "phonologicaldynamiclocal_simdrop") | 
+           str_detect(Model, "phonologicaldynamiclocal_troyerextended") |
+           str_detect(Model, best_model_name))
+
+write.csv(best_betas, "results/subject_salience_values.csv", row.names = FALSE)
+
+best_betas_overall = best_betas %>%
+  pivot_longer(names_to = "parameter", cols=Beta_Frequency:Beta_Phonological) %>%
+  group_by(version, Model, parameter) %>%
+  summarize(mean_value = mean(value))  %>%
+  pivot_wider(names_from = parameter, values_from = mean_value)
+
+write.csv(best_betas_overall, "results/overall_salience_values.csv", row.names = FALSE)
+```
+
+# switch results
+
+```{r}
+Switch_Methods = c("troyerextended", "simdrop", "delta_rise=0.0_fall=1.0")
+switchv1data = read_csv("forager_results/output/switch_results.csv") %>% 
+  mutate(v = "V1") %>% 
+  filter(Switch_Method %in% Switch_Methods)%>%
+  filter(Subject %in% final_subjects)
+
+write.csv(switchv1data, "results/subject_switch_results.csv", row.names = FALSE)
+```
+## individual results
+```{r}
+individual_stats = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
+  mutate(version = "V1") %>% 
+  filter(Switch_Method %in% Switch_Methods) %>%
+  select(Subject, Switch_Method:version)%>%
+  filter(Subject %in% final_subjects)
+
+write.csv(individual_stats, "results/subject_individual_stats.csv", row.names = FALSE)
+
+```
+
+# checking
+```{r}
+matlab = read.delim("MATLAB_summary_results.txt", sep = "\t")
+forager = read_csv("forager_results/output/individual_descriptive_stats.csv") 
+# troyer
+switch_metrics = forager %>% filter(Switch_Method == "troyerextended") %>%
+  select(Subject,Switch_Method:Cluster_Size_std)
+
+# delta
+
+switch_metrics = forager %>% filter(Switch_Method == "delta_rise=0.0_fall=1.0") %>%
+  select(Subject,Switch_Method:Cluster_Size_std)
+
+all_metrics = forager %>% filter(!is.na(Semantic_Similarity_mean)) %>%
+  select(Subject: `#_of_Items`) %>% left_join(switch_metrics)
+
+stopifnot(round(all_metrics$Semantic_Similarity_mean,2) == round(matlab$mean_overall_semantic_sim,2))
+stopifnot(round(all_metrics$`#_of_Items`,2) == round(matlab$total_responses,2 ))
+## troyer
+stopifnot(round(all_metrics$Number_of_Switches,2) == round(matlab$switch_count_troyerF,2 ))
+stopifnot(round(all_metrics$Cluster_Size_mean,2) == round(matlab$mean_cluster_size_with_singletons_troyerF,2 ))
+
+## delta
+
+stopifnot(round(all_metrics$Number_of_Switches,2) == round(matlab$switch_count_delta,2 ))
+stopifnot(round(all_metrics$Cluster_Size_mean,2) == round(matlab$mean_cluster_size_with_singletons_delta,2 ))
+
+
 
 ```
 
@@ -104,105 +227,6 @@ lexical_mean %>%
   theme_clean()
 ```
 
-# best model
-
-```{r}
-v1models = read_csv("forager_results/output/model_results.csv") %>%
-  mutate(version = "V1")
-# v2models = read_csv("forager/output/corrected_V2_results/model_results.csv") %>%
-#   mutate(version = "V2")
-#combined_models = rbind(v1models, v2models)
-combined_models = v1models
-
-# confirm no missing nLLs
-which(is.na(combined_models$Negative_Log_Likelihood_Optimized))
-
-# best models
-
-combined_models %>% 
-  group_by(version, Model) %>%
-  summarize(sumNLL = sum(Negative_Log_Likelihood_Optimized)) %>%
-  ungroup() %>% group_by(version) %>%
-  filter(sumNLL == min(sumNLL))
-
-best_model_name = "phonologicaldynamiclocal_delta_rise_rise=0.0_fall=1.0"
-## same as delta
-
-# norm_based LLs
-best_betas = combined_models %>% 
-  filter(str_detect(Model, "phonologicaldynamiclocal_simdrop") | 
-           str_detect(Model, "phonologicaldynamiclocal_troyerextended") |
-           str_detect(Model, "phonologicaldynamiclocal_delta_rise=0.0_fall=1.0"))
-
-write.csv(best_betas, "results/subject_salience_values.csv", row.names = FALSE)
-
-best_betas_overall = best_betas %>%
-  pivot_longer(names_to = "parameter", cols=Beta_Frequency:Beta_Phonological) %>%
-  group_by(version, Model, parameter) %>%
-  summarize(mean_value = mean(value))  %>%
-  pivot_wider(names_from = parameter, values_from = mean_value)
-
-write.csv(best_betas_overall, "results/overall_salience_values.csv", row.names = FALSE)
-```
-
-# individual results
-
-```{r}
-combinedswitch = combinedswitch %>% filter(Switch_Method %in% 
-                                             c("troyerextended", "simdrop", 
-                                               "delta_rise=0.0_fall=1.0"))
-
-write.csv(combinedswitch, "results/subject_switch_results.csv", row.names = FALSE)
-
-# individual results
-
-individual_stats1 = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
-  mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
-                                                         "troyerextended")) %>%
-  select(Subject, Switch_Method:version)
-
-# individual_stats2 = read_csv("forager/output/corrected_V2_results/individual_descriptive_stats.csv") %>%
-#   mutate(version = "V1") %>% filter(Switch_Method %in% c("delta_rise=0.0_fall=1.0", "simdrop",
-#                                                          "troyerextended")) %>%
-#   select(Subject, Switch_Method:version)
-
-combined_individual = individual_stats1# rbind(individual_stats1, individual_stats2)
-
-write.csv(combined_individual, "results/subject_individual_stats.csv", row.names = FALSE)
-
-```
-
-# checking
-```{r}
-matlab = read.delim("MATLAB_summary_results.txt", sep = "\t")
-forager = read_csv("forager_results/output/individual_descriptive_stats.csv") 
-# troyer
-switch_metrics = forager %>% filter(Switch_Method == "troyerextended") %>%
-  select(Subject,Switch_Method:Cluster_Size_std)
-
-# delta
-
-switch_metrics = forager %>% filter(Switch_Method == "delta_rise=0.0_fall=1.0") %>%
-  select(Subject,Switch_Method:Cluster_Size_std)
-
-
-all_metrics = forager %>% filter(!is.na(Semantic_Similarity_mean)) %>%
-  select(Subject: `#_of_Items`) %>% left_join(switch_metrics)
-
-stopifnot(round(all_metrics$Semantic_Similarity_mean,2) == round(matlab$mean_overall_semantic_sim,2))
-stopifnot(round(all_metrics$`#_of_Items`,2) == round(matlab$total_responses,2 ))
-## troyer
-stopifnot(round(all_metrics$Number_of_Switches,2) == round(matlab$switch_count_troyerF,2 ))
-stopifnot(round(all_metrics$Cluster_Size_mean,2) == round(matlab$mean_cluster_size_with_singletons_troyerF,2 ))
-
-## delta
-
-stopifnot(round(all_metrics$Number_of_Switches,2) == round(matlab$switch_count_delta,2 ))
-stopifnot(round(all_metrics$Cluster_Size_mean,2) == round(matlab$mean_cluster_size_with_singletons_delta,2 ))
-
-
-
-```
 
 
 <!-- # norms -->

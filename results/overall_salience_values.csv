@@ -1,4 +1,3 @@
 "version","Model","Beta_Frequency","Beta_Phonological","Beta_Semantic"
-"V1","forage_phonologicaldynamiclocal_delta_rise=0.0_fall=1.0",5.03803146517302,-0.216366431196949,5.41868871721573
-"V1","forage_phonologicaldynamiclocal_simdrop",4.99934565979292,-0.198528552013953,5.30361021718065
-"V1","forage_phonologicaldynamiclocal_troyerextended",5.12310421607862,-0.264029466600336,5.9264719170677
+"V1","forage_phonologicaldynamiclocal_simdrop",4.92303278484562,-0.200344755457364,5.18363211382218
+"V1","forage_phonologicaldynamiclocal_troyerextended",5.06031105711473,-0.192993337572303,5.57686875966692
