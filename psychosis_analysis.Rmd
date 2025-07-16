@@ -51,7 +51,7 @@ subject_scores = read_csv("forager_results/output/individual_descriptive_stats.c
   select(Subject, n) %>% filter(!is.na(n)) %>%
   filter(Subject %in% final_subjects)
 
-subjectBICs = combined_models %>% 
+subjectBICs = v1models %>% 
   left_join(parameter_file) %>% left_join(subject_scores)%>%
   group_by(Subject) %>%
   mutate(BIC = k * log(n) - 2 * (-Negative_Log_Likelihood_Optimized))
@@ -59,7 +59,7 @@ subjectBICs = combined_models %>%
 
 ## only include troyer, delta, and multimodal delta
 subject_best_model_stats =subjectBICs %>% 
-  filter(str_detect(Model, "multimodaldelta|\\bdelta\\b|troyerextended\\b|forage_random_baseline")) %>%
+  filter(str_detect(Model, "multimodaldelta|troyerextended\\b")) %>%
   group_by(Subject) %>%
   slice_min(BIC)
 
@@ -85,9 +85,15 @@ randomBICs = subjectBICs %>%
 
 modelBICs = subjectBICs %>% 
   left_join(randomBICs)%>%
-  mutate(deltaBIC = randomBIC - BIC) %>%
-  group_by(version, Model) %>%
+  mutate(deltaBIC = randomBIC - BIC) #%>%
+  group_by(Subject, Model) %>%
   summarise(meanBIC = mean(deltaBIC)) 
+
+## best model for each subject = largest improvement from random model
+best_model_subject = modelBICs %>% 
+  filter(str_detect(Model, "multimodaldelta|troyerextended|forage_random_baseline|forage_static")) %>%
+  group_by(Subject) %>% 
+  slice_max(deltaBIC)
 
 best_model_name = modelBICs %>%
   filter(str_detect(Model, "multimodaldelta|\\bdelta\\b|forage_random_baseline")) %>%
@@ -162,6 +168,49 @@ simdrop_switchv1data = read_csv("forager_results/output/switch_results.csv") %>%
 
 write.csv(switchv1data, "simdrop_inclusive/subject_switch_results.csv", row.names = FALSE)
 ```
+
+## best-subject-switch
+
+```{r}
+best_subject_switch = subject_best_model_stats %>% 
+  separate(Model, sep = "_", into = c("forage", "model", "switch_method", "p1", "p2", "p3")) %>%
+  mutate(
+    switch_method = if_else(
+      is.na(p1) | is.na(p2) | is.na(p3),
+      switch_method,
+      str_c(switch_method, p1, p2, p3, sep = "_")
+    )
+  ) %>%
+  select(-p1, -p2, -p3)  
+
+best_subject_switchv1data = read_csv("forager_results/output/switch_results.csv") %>%
+  filter(Subject %in% final_subjects) %>%
+   inner_join(
+    best_subject_switch %>% select(Subject, switch_method),
+    by = c("Subject", "Switch_Method" = "switch_method")
+  )
+
+write.csv(best_subject_switchv1data, "results/best_subject_switch.csv", row.names = FALSE)
+```
+
+
+## compare 
+
+```{r}
+s = read_csv("results/subject_switch_results.csv") %>%
+  group_by(Subject, Switch_Method) %>%
+  mutate(item = row_number()) %>% ungroup() %>%
+  pivot_wider(names_from = Switch_Method, values_from = Switch_Value)
+
+l = read_csv("results/subject_lexical_results.csv") %>%
+  group_by(Subject) %>%
+  mutate(item = row_number()) %>% ungroup() %>%
+  left_join(s) %>%
+  rename(delta = "multimodaldelta_alpha=1.0_rise=0.25_fall=1.0")%>%
+  select(Subject, Fluency_Item, Semantic_Similarity, item, delta, troyerextended) %>%
+  mutate(mismatch = ifelse(delta != troyerextended, 1,0))
+```
+
 ## individual results
 ```{r}
 individual_stats = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
@@ -170,6 +219,21 @@ individual_stats = read_csv("forager_results/output/individual_descriptive_stats
   filter(Subject %in% final_subjects)
 
 write.csv(individual_stats, "results/subject_individual_stats.csv", row.names = FALSE)
+
+
+### best subject 
+
+best_subject_individual_stats = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
+  filter(Subject %in% final_subjects) %>%
+   inner_join(
+    best_subject_switch %>% select(Subject, switch_method),
+    by = c("Subject", "Switch_Method" = "switch_method")
+  ) %>%
+  select(Subject, Switch_Method:Cluster_Size_std)
+
+write.csv(best_subject_individual_stats, 
+          "results/subject_best_models/best_subject_individual_stats.csv", 
+          row.names = FALSE)
 ```
 ### simdrop inclusive results
 ```{r}
@@ -285,6 +349,61 @@ lexical_mean %>%
   geom_point()+
   geom_line()+
   theme_clean()
+```
+
+# percent model fit
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Prepare switch method data
+switch_counts <- best_subject_switch %>% 
+  mutate(switch_method_label = 
+           ifelse(switch_method == "troyerextended", "troyer", "multimodal_delta")) %>%
+  group_by(switch_method_label) %>%
+  count() %>% ungroup() %>%
+  mutate(
+    percentage = round(100 * n / sum(n), 1),
+    type = "Switch Method",
+    label = switch_method_label
+  ) %>%
+  select(type, label, n, percentage)
+
+# Prepare model data
+model_counts <- best_subject_switch %>% 
+  mutate(model = case_when(model == "phonologicaldynamicglobal" ~ "p-global", 
+                        model == "phonologicaldynamiclocal" ~ "p-local",
+                        model == "phonologicaldynamicswitch" ~ "p-switch",
+                        .default = "no-phonology")) %>%
+  group_by(model) %>%
+  count() %>% ungroup() %>%
+  mutate(
+    percentage = round(100 * n / sum(n), 1),
+    type = "Model",
+    label = model
+  ) %>%
+  select(type, label, n, percentage)
+
+# Combine
+combined_counts <- bind_rows(switch_counts, model_counts)
+
+
+
+# Plot
+ggplot(combined_counts, aes(x = type, y = percentage, fill = label)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = paste0(label, ":", percentage, "%")),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            size = 4) +
+  labs(x = NULL, y = "Percentage", title = "Distribution of Best Models and Switch Methods") +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme(
+    text = element_text(size = 12),
+    legend.position = "none"
+  )
 ```
 
 
