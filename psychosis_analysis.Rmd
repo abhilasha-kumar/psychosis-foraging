@@ -45,7 +45,7 @@ v1models = read_csv("forager_results/output/model_results.csv") %>%
 # confirm no missing nLLs
 which(is.na(v1models$Negative_Log_Likelihood_Optimized))
 
-parameter_file = read_csv("parameters.csv")
+parameter_file = read_csv("parameters_noswitch.csv")
 subject_scores = read_csv("forager_results/output/individual_descriptive_stats.csv") %>%
   rename(n = `#_of_Items`) %>%
   select(Subject, n) %>% filter(!is.na(n)) %>%
@@ -59,12 +59,13 @@ subjectBICs = v1models %>%
 
 ## only include troyer, delta, and multimodal delta
 subject_best_model_stats =subjectBICs %>% 
-  filter(str_detect(Model, "multimodaldelta|troyerextended\\b")) %>%
+  filter(!str_detect(Model, "norms_associative|norms_categorical")) %>%
+  #filter(str_detect(Model, "multimodaldelta|troyerextended\\b")) %>%
   group_by(Subject) %>%
   slice_min(BIC)
 
 write.csv(subject_best_model_stats, 
-          "results/individual_best_models.csv", row.names = FALSE)
+          "results/overall_best/individual_best_models.csv", row.names = FALSE)
 ```
 ### simdrop included best models
 ```{r}
@@ -91,7 +92,7 @@ modelBICs = subjectBICs %>%
 
 ## best model for each subject = largest improvement from random model
 best_model_subject = modelBICs %>% 
-  filter(str_detect(Model, "multimodaldelta|troyerextended|forage_random_baseline|forage_static")) %>%
+  # filter(str_detect(Model, "multimodaldelta|troyerextended|forage_random_baseline|forage_static")) %>%
   group_by(Subject) %>% 
   slice_max(deltaBIC)
 
@@ -172,16 +173,18 @@ write.csv(switchv1data, "simdrop_inclusive/subject_switch_results.csv", row.name
 ## best-subject-switch
 
 ```{r}
-best_subject_switch = subject_best_model_stats %>% 
-  separate(Model, sep = "_", into = c("forage", "model", "switch_method", "p1", "p2", "p3")) %>%
+best_subject_switch <- subject_best_model_stats %>%
+  separate(Model, sep = "_", 
+           into = c("forage", "model", "switch_method", "p1", "p2", "p3"), 
+           fill = "right") %>%
   mutate(
-    switch_method = if_else(
-      is.na(p1) | is.na(p2) | is.na(p3),
-      switch_method,
-      str_c(switch_method, p1, p2, p3, sep = "_")
+    switch_method = case_when(
+      is.na(switch_method) ~ NA_character_,
+      all(is.na(p1), is.na(p2), is.na(p3)) ~ switch_method,
+      TRUE ~ str_c(c(switch_method, p1, p2, p3) %>% discard(is.na), collapse = "_")
     )
   ) %>%
-  select(-p1, -p2, -p3)  
+  select(-p1, -p2, -p3)
 
 best_subject_switchv1data = read_csv("forager_results/output/switch_results.csv") %>%
   filter(Subject %in% final_subjects) %>%
@@ -190,7 +193,7 @@ best_subject_switchv1data = read_csv("forager_results/output/switch_results.csv"
     by = c("Subject", "Switch_Method" = "switch_method")
   )
 
-write.csv(best_subject_switchv1data, "results/best_subject_switch.csv", row.names = FALSE)
+write.csv(best_subject_switchv1data, "results/overall_best/best_subject_switch.csv", row.names = FALSE)
 ```
 
 
@@ -232,7 +235,7 @@ best_subject_individual_stats = read_csv("forager_results/output/individual_desc
   select(Subject, Switch_Method:Cluster_Size_std)
 
 write.csv(best_subject_individual_stats, 
-          "results/subject_best_models/best_subject_individual_stats.csv", 
+          "results/overall_best/best_subject_individual_stats.csv", 
           row.names = FALSE)
 ```
 ### simdrop inclusive results
