@@ -410,6 +410,382 @@ ggplot(combined_counts, aes(x = type, y = percentage, fill = label)) +
 ```
 
 
+# PATCH ANALYSIS
+
+```{r}
+d = readxl::read_excel("../Nov_14_2025/patch_retrieval_throughout_VFT.xlsx", 
+                       sheet = "patch_retrieval_over_time")
+
+# Reshape to long format
+data_long <- d %>%
+  #sample_n(20) %>%
+  pivot_longer(cols = starts_with("Patch_retrieval"),
+               names_to = "Cluster",
+               values_to = "Items") %>%
+  mutate(Cluster = as.numeric(gsub("Patch_retrieval_", "", Cluster)))
+
+# Bubble plot
+ggplot(data_long, aes(x = Cluster, y = factor(Participant), size = Items)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  scale_size_continuous(range = c(2, 15)) + # adjust min/max bubble size
+  theme_minimal() +
+  labs(title = "Items Retrieved per Cluster Over Time",
+       x = "Time / Cluster Order",
+       y = "Participant",
+       size = "Items Retrieved")
+```
+
+```{r}
+plot_data <- data_long %>%
+  filter(!is.na(Items)) %>%
+  group_by(Participant) %>%
+  mutate(
+    total_items = sum(Items),
+    cum_items   = cumsum(Items),
+    perc_items  = cum_items / total_items
+  ) %>%
+  ungroup()
+
+participant_order <- plot_data %>%
+  group_by(Participant) %>%
+  summarize(mean_early_cluster =
+              mean(Items[perc_items <= 0.33])) %>%
+  arrange(desc(mean_early_cluster))
+
+plot_data$Participant <- factor(
+  plot_data$Participant,
+  levels = participant_order$Participant
+)
+
+
+ggplot(plot_data,
+       aes(x = perc_items,
+           y = factor(Participant),
+           size = Items,
+           color = Items)) +
+  geom_point(alpha = 0.7) +
+  scale_x_continuous(labels = scales::percent_format(),
+                     limits = c(0, 1)) +
+  scale_size(range = c(2, 10)) +
+  scale_color_viridis_c(option = "C") +
+  labs(
+    x = "% of total items produced",
+    y = "Participant",
+    size = "Cluster size",
+    color = "Cluster size",
+    title = "Cluster size over normalized production time"
+  ) +
+  theme_minimal() 
+
+```
+
+# plot
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+
+# Participants to highlight
+highlight_ids <- c("802", "803", "808")
+
+ggplot(plot_data, aes(x = perc_items, y = Items, group = Participant)) +
+
+  # Background participants (thin, muted)
+  geom_line(data = plot_data_full %>% filter(!Participant %in% highlight_ids),
+            aes(color = NULL), size = 0.3, alpha = 0.3) +
+  geom_point(data = plot_data_full %>% filter(!Participant %in% highlight_ids),
+             aes(color = NULL), alpha = 0.1, size = 1) +
+
+  # Highlighted participants (bold, colored)
+  geom_line(data = plot_data %>% filter(Participant %in% highlight_ids),
+            aes(color = Participant), size = 1.2) +
+  geom_point(data = plot_data %>% filter(Participant %in% highlight_ids),
+             aes(color = Participant), size = 3) +
+
+  scale_y_continuous(breaks = 1:max(plot_data$Items)) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    x = "Percent of total items produced",
+    y = "Items per cluster",
+    title = "Full trajectories of item production with key participants highlighted",
+    colour = "Participant"
+  ) +
+  theme_few() +
+  theme(legend.position = "right")
+
+```
+
+# cluster summary
+
+```{r}
+cluster_summary <- plot_data %>%
+  group_by(Participant) %>%
+  summarise(
+    total_items = sum(Items),            # overall retrieval
+    n_clusters = n(),                     # number of clusters
+    max_items_cluster = max(Items),       # largest single cluster
+    mean_items_per_cluster = total_items / n_clusters,
+    sd_items_per_cluster = sd(Items),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    max_prop = max_items_cluster / total_items,     # proportion of items in largest cluster
+    clustering_index = mean_items_per_cluster / n_clusters  # ratio capturing cluster size vs number
+  ) %>%
+  mutate(total_items_z = scale(total_items)) 
+
+lm_strategy <- lm(total_items_z ~ mean_items_per_cluster + max_prop + n_clusters,
+                  data = cluster_summary)
+car::Anova(lm_strategy)
+
+
+
+
+```
+
+
+# slope analysis
+
+```{r}
+library(dplyr)
+library(broom)
+
+totals <- plot_data %>%
+  group_by(Participant) %>%
+  summarise(total_items = sum(Items), .groups = "drop")
+
+slopes_df <- plot_data %>%
+  group_by(Participant) %>%
+  do({
+    fit <- lm(Items ~ perc_items, data = .)
+    tidy(fit)
+  }) %>%
+  filter(term == "perc_items") %>%
+  dplyr::select(Participant, slope = estimate) %>%
+  ungroup() %>%
+  # join total items
+  left_join(
+    plot_data %>%
+      group_by(Participant) %>%
+      summarise(total_items = sum(Items), .groups = "drop"),
+    by = "Participant"
+  ) %>%
+  mutate(
+    slope_z = as.numeric(scale(slope)),
+    total_items_z = as.numeric(scale(total_items)))
+
+write.csv(plot_data, file = "patch_data/slopes.csv", row.names = FALSE)
+
+m <- lm(total_items_z ~ slope_z, data = slopes_df)
+summary(m)
+
+influence <- data.frame(
+  Participant = slopes_df$Participant,
+  cooks_d = cooks.distance(m),
+  leverage = hatvalues(m)
+)
+
+influence %>%
+  arrange(desc(cooks_d)) %>%
+  head()
+
+library(robustbase)
+
+m_rb <- lmrob(total_items_z ~ slope_z, data = slopes_df)
+summary(m_rb)
+
+library(ggplot2)
+
+ggplot(slopes_df, aes(x = slope_z, y = total_items_z)) +
+  geom_point(size = 2, alpha = .7) +
+  geom_smooth(method = "lm", se = TRUE) +
+  geom_text(aes(label = Participant), 
+            vjust = -0.6, size = 3, alpha = .8) +
+  labs(
+    x = "Production trajectory slope (z)",
+    y = "Total items produced (z)",
+    title = "Search trajectory predicts verbal fluency output"
+  ) +
+  theme_classic()
+
+## SUSTAINED OR INCREASED PRODUCTION OVER TIME RELATED TO HIGHER FLUENCY
+
+```
+
+
+# patch revisit
+
+```{r}
+revisit = readxl::read_excel("../Nov_14_2025/troyer_switches_FEPanimals1minV1_n72.xlsx")
+
+library(dplyr)
+library(stringr)
+
+revisit_flagged <- revisit %>%
+  group_by(subject) %>%
+  mutate(
+    # cluster id: cumulative sum of troyer_fluid_switch != 0
+    cluster_id = cumsum(troyer_fluid_switch != 0),
+    # get unique categories per response
+    subcategories = str_split(categories_for_each_response, "_")
+  ) %>%
+  group_by(subject, cluster_id) %>%
+  mutate(
+    # take only the first item of the cluster for revisit checking
+    first_in_cluster = row_number() == 1
+  ) %>%
+  ungroup() %>%
+  group_by(subject) %>%
+  mutate(
+    revisited_category = sapply(seq_along(categories_for_each_response), function(i) {
+      if (!first_in_cluster[i]) return(NA)  # only check first in cluster
+      
+      current_cats <- subcategories[[i]]
+      if (i == 1) return(NA)  # first response cannot be a revisit
+      
+      # get all categories from previous clusters
+      prev_clusters <- subcategories[1:(i-1)]
+      prev_cats <- unique(unlist(prev_clusters))
+      
+      # which categories are revisited
+      revisited <- current_cats[current_cats %in% prev_cats]
+      if (length(revisited) == 0) return(NA) else paste(revisited, collapse = "_")
+    }),
+    is_revisit = !is.na(revisited_category)
+  )%>%
+  group_by(subject) %>%
+  mutate(
+    item_index = row_number(),
+    rel_position = item_index / n()  # 0 = start, 1 = end
+  )
+```
+### revisit related to fluency?
+```{r}
+library(dplyr)
+
+fluency_summary <- revisit_flagged %>%
+  group_by(subject) %>%
+  summarize(
+    total_items = n(),                     # total number of responses
+    total_revisits = sum(is_revisit),     # total number of revisits
+    prop_revisits = total_revisits / total_items,
+    .groups = "drop"
+  )
+
+library(ggplot2)
+
+ggplot(fluency_summary, aes(x = prop_revisits, y = total_items)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  labs(x = "Number of revisits", y = "Total fluency (items)",
+       title = "Overall fluency vs. category revisitation")
+
+model_total <- lm(total_items ~ total_revisits, data = fluency_summary)
+summary(model_total)
+# higher fluency related to higher revisits
+model_prop <- lm(total_items ~ prop_revisits, data = fluency_summary)
+summary(model_prop)
+# effect goes away when controlling for total items
+```
+### timing revisits
+```{r}
+
+revisit_flagged = revisit_flagged %>% left_join(fluency_summary)
+
+write.csv(revisit_flagged %>% dplyr::select(-subcategories),
+          file = "patch_data/revisits.csv", row.names = FALSE)
+
+
+timing_revisits <- revisit_flagged %>%
+  filter(is_revisit) %>%
+  group_by(subject) %>%
+  summarize(
+    mean_rel_position = mean(rel_position),  # average timing of revisits
+    .groups = "drop"
+  )
+
+revisit_diversity <- revisit_flagged %>%
+  filter(!is.na(revisited_category)) %>%
+  mutate(revisited_category = str_split(revisited_category, "_")) %>%
+  unnest(revisited_category) %>%
+  group_by(subject) %>%
+  summarize(
+    # how many different categories revisited
+    n_revisited_categories = n_distinct(revisited_category),  
+    # total revisit events
+    total_revisits = n(),                                     
+    .groups = "drop"
+  ) %>%
+  mutate(
+    prop_unique_revisited = n_revisited_categories / total_revisits
+  )
+
+
+
+participant_metrics <- fluency_summary %>%
+  dplyr::select(subject, total_items) %>%
+  left_join(timing_revisits, by = "subject") %>%
+  left_join(revisit_diversity, by = "subject")
+
+write.csv(participant_metrics,
+          file = "patch_data/revisits_aggregate.csv", row.names = FALSE)
+
+model_combined <- lm(total_items ~ mean_rel_position + prop_unique_revisited, 
+                     data = participant_metrics)
+summary(model_combined)
+
+library(ggplot2)
+
+ggplot(participant_metrics, aes(
+  x = mean_rel_position,
+  y = total_items)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = TRUE, color = "blue") +
+  scale_size(range = c(2, 6)) +
+  labs(
+    x = "Mean relative timing of revisits",
+    y = "Total items produced",
+    title = "Fluency vs. Timing of Revisits"
+  ) +
+  theme_minimal()
+### so big story:
+
+## revisiting categories EARLIER is beneficial
+```
+
+# coverage
+
+```{r}
+
+all_coverage = read_csv("forager_results/output/coverage_animals.csv") %>%
+  rename(Subject = "ID") %>%
+  filter(Subject %in% final_subjects)
+
+coverage_summary <- all_coverage %>%
+  group_by(Subject) %>%
+  dplyr::summarize(
+    fluency_score = n(),
+    first_item = word[which.min(distance_to_first_item)],
+    mean_distance_to_first = mean(distance_to_first_item, na.rm = TRUE),
+    mean_distance_to_centroid = mean(distance_to_centroid, na.rm = TRUE),
+    mean_distance_to_animals = mean(distance_to_domain, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+coverage_model = lm(data = coverage_summary, 
+                      fluency_score ~ mean_distance_to_first)
+summary(coverage_model)
+car::Anova(coverage_model)
+
+write.csv(all_coverage,
+          file = "patch_data/coverage_trial_level.csv", row.names = FALSE)
+
+write.csv(coverage_summary,
+          file = "patch_data/coverage_summary.csv", row.names = FALSE)
+
+```
+
 
 <!-- # norms -->
 

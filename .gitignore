@@ -1,5 +1,13 @@
 **.DS_Store
 
+# Python cache directories
+__pycache__/
+
+# Compiled Python files
+*.pyc
+*.pyo
+*.pyd
+
 # History files
 **.Rhistory
 .Rapp.history
